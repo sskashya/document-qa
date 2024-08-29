@@ -18,12 +18,15 @@ else:
 
     # Create an OpenAI client.
     client = OpenAI(api_key=openai_api_key)
-    if client:
+    try:
+        client
+    except:
+        print("API Key does not exist") 
+    else:  
     # Let the user upload a file via `st.file_uploader`.
         uploaded_file = st.file_uploader(
             "Upload a document (.txt or .md)", type=("txt", "md")
     )
-
     # Ask the user for a question via `st.text_area`.
         question = st.text_area(
             "Now ask a question about the document!",
@@ -50,10 +53,4 @@ else:
         )
 
         # Stream the response to the app using `st.write_stream`.
-            st.write_stream(stream)
-        else:
-            stream = client.chat.completions.create(
-            model="gpt-40-mini",
-            stream=True,
-        )
             st.write_stream(stream)
