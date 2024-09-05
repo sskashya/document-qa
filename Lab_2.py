@@ -21,7 +21,7 @@ client = OpenAI(api_key=openai_api_key)
 
 summary = st.sidebar.radio("Select your summary style",
                            ["Summarize doc in 100 words",
-                            "Summarize doc in 2 connecting paragrpahs"
+                            "Summarize doc in 2 connecting paragrpahs",
                             "Summarize doc in 5 bullet points"])
 
 language_model = st.sidebar.radio("Select your Language Model", 
