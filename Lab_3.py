@@ -32,11 +32,10 @@ if 'messages' not in st.session_state:
     st.session_state['messages'] = [{'role':'assistant', 'content':'How can I help you?'}]
 
 sys_messages = '''
-I want you to always ask the user "Do you need more info?" after their first prompt. 
-If they say 'Yes', then provide more info followed by "Do you need more info?".
-If they say 'No', then say "What else can I help you with?".
-
-Finally, provide answers such that someone who is 10 years-old will be able to understand.
+Always ask the user "Do you need more info?" after their first prompt. 
+If the user replies with Yes, then provide more info followed by "Do you need more info?" but,
+if they reply with No, the assistant should reply with "What else can I help you with?" and nothing else. 
+Finally, provide answers so that someone who is 10 years-old will be able to understand.
 ''' 
 
 for msg in st.session_state.messages:
@@ -47,18 +46,20 @@ if prompt := st.chat_input("Type Here"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    messages = {"role":"system", "content":sys_messages}
+    message = st.session_state.messages[-5:]
+    message.append({"role":"system", "content":sys_messages})
+
     if language_model == "OpenAI" and not adv_model:
     # Generate an answer using the OpenAI API.
-            stream = st.session_state.client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=messages.append(st.session_state.messages[-5:]),
-            stream=True,
+        stream = st.session_state.client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=message,
+        stream=True,
         )
     else:
-            stream = st.session_state.client.chat.completions.create(
+        stream = st.session_state.client.chat.completions.create(
                 model="gpt-4o",
-                messages=messages.append(st.session_state.messages[-5:]),
+                messages=message,
                 stream=True,
             ) 
     with st.chat_message("assistant"):
