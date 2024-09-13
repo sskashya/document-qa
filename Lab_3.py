@@ -31,6 +31,14 @@ else:
 if 'messages' not in st.session_state:
     st.session_state['messages'] = [{'role':'assistant', 'content':'How can I help you?'}]
 
+sys_messages = '''
+I want you to always ask the user "Do you need more info?" after their first prompt. 
+If they say 'Yes', then provide more info followed by "Do you need more info?".
+If they say 'No', then say "What else can I help you with?".
+
+Finally, provide answers such that someone who is 10 years-old will be able to understand.
+''' 
+
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
@@ -38,27 +46,22 @@ if prompt := st.chat_input("Type Here"):
     st.session_state.messages.append({"role":"user", "content":prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
+
+    messages = {"role":"system", "content":sys_messages}
     if language_model == "OpenAI" and not adv_model:
     # Generate an answer using the OpenAI API.
             stream = st.session_state.client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=st.session_state.messages[-5:],
+            messages=messages.append(st.session_state.messages[-5:]),
             stream=True,
         )
     else:
             stream = st.session_state.client.chat.completions.create(
                 model="gpt-4o",
-                messages=st.session_state.messages[-5:],
+                messages=messages.append(st.session_state.messages[-5:]),
                 stream=True,
             ) 
     with st.chat_message("assistant"):
         response = st.write_stream(stream)
-        st.write("Do you want more info?")
     
-    st.session_state.messages.append({"role":"assistant", "content": f"{response}. Do you want more info?"})
-    if st.chat_message("user") == "Yes":
-        response = st.write_stream(stream)
-        st.session_state.messages.append({"role":"assistant", "content":response})
-    else:
-        response = st.write_stream(stream)
-        st.session_state.messages.append({"role":"assistant", "content":f"{response}. Do you want more info?"})
+    st.session_state.messages.append({"role":"assistant", "content": response})
