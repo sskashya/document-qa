@@ -109,10 +109,6 @@ for file in os.listdir(folder_path):
 if 'messages' not in st.session_state:
     st.session_state['messages'] = [{'role':'assistant', 'content':'How can I help you?'}]
 
-#retrieved_docs = query_from_collection(st.session_state['Lab4_vectorDB'], topic)
-
-#sys_messages = f"Here are the related files: {', '.join(retrieved_docs)}. Use this information to answer the user question."
-
 for msg in st.session_state.messages:
     st.chat_message(msg["role"]).write(msg["content"])
 
