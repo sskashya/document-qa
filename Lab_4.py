@@ -91,4 +91,4 @@ else:
             add_to_collection(st.session_state['Lab4_vectorDB'], texts, file)
 
     if search:
-        query_from_collection(st.session_state['collection'], topic)
+        query_from_collection(st.session_state['Lab4_vectorDB'], topic)
