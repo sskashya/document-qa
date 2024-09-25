@@ -42,12 +42,13 @@ else:
 if 'messages' not in st.session_state:
     st.session_state['messages'] = [{'role':'assistant', 'content':'How can I help you?'}]
 
-collection = chroma_client.get_or_create_collection(name = "mycollection")
+if 'collection' not in st.session_state:
+    st.session_state['collection'] = chroma_client.get_or_create_collection(name = "Mycollection")
 
 folder_path = "datafiles/"
 texts = []
 for file in os.listdir(folder_path):
-    file_extension = file.name.split('.')[-1]
+    file_extension = file.split('.')[-1]
     if file_extension == 'pdf':
         file_path = os.path.join(folder_path, file)
         with open(file_path, "rb") as pdf_file:
