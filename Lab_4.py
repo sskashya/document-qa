@@ -126,13 +126,13 @@ if prompt := st.chat_input("Type Here"):
 
     if language_model == "OpenAI" and not adv_model:
     # Generate an answer using the OpenAI API.
-        stream = st.session_state.client.chat.completions.create(
+        stream = st.session_state.openai_client.chat.completions.create(
         model="gpt-4o-mini",
         messages=message,
         stream=True,
         )
     else:
-        stream = st.session_state.client.chat.completions.create(
+        stream = st.session_state.openai_client.chat.completions.create(
                 model="gpt-4o",
                 messages=message,
                 stream=True,
