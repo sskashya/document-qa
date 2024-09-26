@@ -40,7 +40,7 @@ open_weather_api = st.secrets["OPENWEATHER_KEY"]
 # Defining Location by concatenating city and state. 
 city = st.text_input(label = "Enter your city", placeholder =  "Ex. Syracuse")
 state = st.text_input(label = "Enter your state", placeholder = "Ex. New York")
-location = object(city + "," + state)
+location = city + "," + state
 # location = location.object()
 
 if not city and not state:
@@ -135,7 +135,7 @@ elif city and state:
             # Accessing the fucntion request:
             response = chat_completion_requests("gpt-4o", messages, tools = tools, tool_choice="auto")
 
-        #st.write(response)
+        st.write(response)
         response_message = response.choices[0].message
         messages.append(response_message)
 
@@ -154,7 +154,7 @@ elif city and state:
                 {"role" : "tool", "tool_call_id" : tool_call_id,
                 "name" : tool_function_name, "content" : results}
             )
-            st.write(messages[-1])
+            # st.write(messages[-1])
             model_response_with_function_call = st.session_state.openai_client.chat.completions.create(
                 model = "gpt-4o",
                 messages = messages,
