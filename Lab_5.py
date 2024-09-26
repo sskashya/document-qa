@@ -63,6 +63,40 @@ def get_current_weather(location, API_key):
         }
 
 
+weather_function_definition = {
+    "type" : "function",
+    "function" : {
+        "name" : "get_current_weather",
+        "description" : "Get the current weather",
+        "parameters": {
+            "type" : "object",
+            "properties" : {
+                "location" : {
+                    "type" : "string",
+                    "description" : "The city and state. E.g. Syracuse NY"
+                },
+                "format" : {
+                    "type" : "string",
+                    "enum" : ["celsius", "farenheit"],
+                    "description": "The temperature unit to use. Infer this from the user's location"
+                },
+            },
+            "required" : ["location", "format"]
+        }
+    }
+}
+
+tools = []
+
+def add_to_tools(function_definition):
+    tools.append(function_definition)
+
+def chat_completion_requests(model, messages, tools = None, tool_choice = None):
+    try:
+        response = st.session_state.openai_client.chat.completions.create(
+            model = model,
+        )
+
 
 
 
