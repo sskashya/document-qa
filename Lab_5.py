@@ -12,6 +12,8 @@ sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import chromadb 
 chroma_client = chromadb.PersistentClient()
 
+# --
+
 # Show title and description.
 st.title("MY Lab 4 question answering chatbot with ChromaDB")
 language_model = st.sidebar.radio("Select your LLM Service", 
@@ -28,23 +30,22 @@ st.write("Select Advanced Model for more expensive LLM Model")
 if language_model and adv_model:
     st.subheader("You are having a conversation with gpt-4o")
 
-# Ask user for their OpenAI API key via `st.text_input`.
-# Alternatively, you can store the API key in `./.streamlit/secrets.toml` and access it
-# via `st.secrets`, see https://docs.streamlit.io/develop/concepts/connections/secrets-management
-#openai_api_key = st.text_input("OpenAI API Key", type="password")
+# Assigning the api_key to st.session_state to only run it once. 
 if 'openai_client' not in st.session_state:
     openai_api_key = st.secrets["OPENAI_API_KEY"]
     st.session_state.openai_client = OpenAI(api_key=openai_api_key)
 
+# Defining Location by concatenating city and state. 
 city = st.text_input(label = "Enter your city - Ex. Syracuse")
 state = st.text_input(label = "Enter your state - Ex. NY")
 location = city + " " + state
 
-def get_current_weather(location, API_key):
+# Creating a function to get weather based on location
+def get_current_weather(location, API_KEY):
     if "," in location:
         location = location.split(",")[0].strip()
     urlbase = "https://api.openweathermap.org/data/2.5/"
-    urlweather = f"weather?q={location}&appid={API_key}"
+    urlweather = f"weather?q={location}&appid={API_KEY}"
     url = urlbase + urlweather
     response = requests.get(url)
     data = response.json()
@@ -62,7 +63,7 @@ def get_current_weather(location, API_key):
         "humidity": round(humidity, 2)
         }
 
-
+# Defining the function and saving it as a variable before adding it to the list of tools
 weather_function_definition = {
     "type" : "function",
     "function" : {
@@ -77,7 +78,7 @@ weather_function_definition = {
                 },
                 "format" : {
                     "type" : "string",
-                    "enum" : ["celsius", "farenheit"],
+                    "enum" : ["farenheit"],
                     "description": "The temperature unit to use. Infer this from the user's location"
                 },
             },
@@ -86,18 +87,69 @@ weather_function_definition = {
     }
 }
 
-tools = []
+    # Creating an empty list and building a function to append defined functions to the list for the model to choose from.
+    
+if location:
+    tools = []
+    def add_to_tools(function_definition):
+        tools.append(function_definition)
 
-def add_to_tools(function_definition):
-    tools.append(function_definition)
+    # Building a function to create a response for the model to choose the tool. 
+    def chat_completion_requests(model, messages, tools = None, tool_choice = None):
+        try:
+            response = st.session_state.openai_client.chat.completions.create(
+                model = model,
+                messages = messages,
+                tools = tools,
+                tool_choice = tool_choice
+            )
+            return response
+        except Exception as e:
+            print("Unable to generate chat completion")
+            print(f"Execution: {e}")
+            return e
 
-def chat_completion_requests(model, messages, tools = None, tool_choice = None):
-    try:
-        response = st.session_state.openai_client.chat.completions.create(
-            model = model,
+    # Adding weather function to the tools list    
+    add_to_tools(weather_function_definition)
+    st.write(tools)
+
+    # Using the function from the tools list
+    messages = []
+    messages.append({"role" : "system", "content" : "Don't make assumptions about what values to plug into functions. Ask for clarification if user request is ambiguous."})
+    messages.append({"role" : "user", "content" : f"What is the weather in {location}"})
+
+    if language_model == "OpenAI" and not adv_model:
+        # Accessing the fucntion request:
+        response = chat_completion_requests("gpt-4o-mini", messages, tools = tools, tool_choice="auto")
+    else:
+        # Accessing the fucntion request:
+        response = chat_completion_requests("gpt-4o", messages, tools = tools, tool_choice="auto")
+
+    st.write(response)
+    response_message = response.choices[0].message
+    messages.append(response_message)
+
+    tool_calls = response_message.tool_calls
+    if tool_calls:
+        tool_call_id = tool_calls[0].id
+        tool_function_name = tool_calls[0].function.name
+        tool_query_string = eval(tool_calls[0].functions.arguments)['query']
+    else:
+        print(response_message)
+
+    if tool_function_name:
+        results = get_current_weather(location, st.secrets['OPENWEATHER_KEY'])
+        messages.append(
+            {"role" : "tool", "tool_call_id" : tool_call_id,
+             "name" : tool_function_name, "content" : results}
         )
-
-
+        model_response_with_function_call = st.session_state.openai_client.chat.completions.create(
+            model = "gpt-4o",
+            messages = messages,
+        )
+        print(model_response_with_function_call.choices[0].message.content)
+    else:
+        print(f"Error: {tool_function_name} does not exist")
 
 
 
