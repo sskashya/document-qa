@@ -1,6 +1,8 @@
 import streamlit as st
 from openai import OpenAI
 import openai
+from types import SimpleNamespace
+import json
 import os
 import requests
 from PyPDF2 import PdfReader
@@ -65,13 +67,14 @@ elif city and state:
         temp_min = data['main']['temp_min'] - 273.15 
         temp_max = data['main']['temp_max'] - 273.15
         humidity = data['main']['humidity']
-        return {
+        weather_data = {
             "location": location,
             "temperature": round(temp, 2),
             "feels_like": round(feels_like, 2),
             "temp_min": round(temp_min, 2), "temp_max": round(temp_max, 2),
             "humidity": round(humidity, 2)
             }
+        return SimpleNamespace(**weather_data)
 
     # Defining the function and saving it as a variable before adding it to the list of tools
     weather_function_definition = {
@@ -92,7 +95,7 @@ elif city and state:
                         "description": "The temperature unit to use. Infer this from the user's location"
                     },
                 },
-                "required" : ["location", "format"]
+                "required" : ["location"]
             }
         }
     }
@@ -133,31 +136,39 @@ elif city and state:
             response = chat_completion_requests("gpt-4o-mini", messages, tools = tools, tool_choice="auto")
         else:
             # Accessing the fucntion request:
-            response = chat_completion_requests("gpt-4o", messages, tools = tools, tool_choice="auto")
-
+            response = st.session_state.openai_client.chat.completions.create(
+                    model = "gpt-4o",
+                    messages = messages,
+                    tools = tools,
+                    tool_choice = "auto"
+                )
         st.write(response)
         response_message = response.choices[0].message
-        messages.append(response_message)
+        #messages.append({"role" : "function", "content" : response_message.tool_calls[0]})
+        st.write(response_message)
 
         tool_calls = response_message.tool_calls
         if tool_calls:
             tool_call_id = tool_calls[0].id
             tool_function_name = tool_calls[0].function.name
-            tool_query_string = eval(tool_calls[0].function.arguments)["location"]
+            tool_query_string = eval(tool_calls[0].function.arguments)
             # st.write(tool_query_string)
         else:
             print(response_message)
 
         if tool_function_name:
             results = get_current_weather(location, st.secrets['OPENWEATHER_KEY'])
-            messages.append(
-                {"role" : "tool", "tool_call_id" : tool_call_id,
-                "name" : tool_function_name, "content" : results}
-            )
-            # st.write(messages[-1])
+            
+            messages.append({
+                "role" : "tool", 
+                "tool_call_id" : tool_call_id,
+                "name" : tool_function_name, 
+                "content" : json.dumps(vars(results))})
+
+            st.write(messages)
             model_response_with_function_call = st.session_state.openai_client.chat.completions.create(
                 model = "gpt-4o",
-                messages = messages,
+                messages = messages
             )
             print(model_response_with_function_call.choices[0].message.content)
         else:
