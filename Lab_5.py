@@ -53,6 +53,26 @@ elif city and not state:
 
 elif city and state:
     # Creating a function to get weather based on location
+
+    # Defining the function and saving it as a variable before adding it to the list of tools
+    tools = [{
+        "type" : "function",
+        "function" : {
+            "name" : "get_current_weather",
+            "description" : "Get the current weather",
+            "parameters": {
+                "type" : "object",
+                "properties" : {
+                    "location" : {
+                        "type" : "string",
+                        "description" : "The city and state. E.g. Syracuse,New York"
+                    },
+                },
+                "required" : ["location"]
+            }
+        }
+    }]
+
     def get_current_weather(location, API_KEY):
         if "," in location:
             location = location.split(",")[0].strip()
@@ -71,44 +91,14 @@ elif city and state:
             "location": location,
             "temperature": round(temp, 2),
             "feels_like": round(feels_like, 2),
-            "temp_min": round(temp_min, 2), "temp_max": round(temp_max, 2),
+            "temp_min": round(temp_min, 2), 
+            "temp_max": round(temp_max, 2),
             "humidity": round(humidity, 2)
             }
-        return SimpleNamespace(**weather_data)
-
-    # Defining the function and saving it as a variable before adding it to the list of tools
-    weather_function_definition = {
-        "type" : "function",
-        "function" : {
-            "name" : "get_current_weather",
-            "description" : "Get the current weather",
-            "parameters": {
-                "type" : "object",
-                "properties" : {
-                    "location" : {
-                        "type" : "string",
-                        "description" : "The city and state. E.g. Syracuse,New York"
-                    },
-                    "format" : {
-                        "type" : "string",
-                        "enum" : ["farenheit"],
-                        "description": "The temperature unit to use. Infer this from the user's location"
-                    },
-                },
-                "required" : ["location"]
-            }
-        }
-    }
-
+        return weather_data
         # Creating an empty list and building a function to append defined functions to the list for the model to choose from.
         
-    if location:
-        tools = []
-        def add_to_tools(function_definition):
-            tools.append(function_definition)
-
-        # Building a function to create a response for the model to choose the tool. 
-        def chat_completion_requests(model, messages, tools = None, tool_choice = None):
+    def chat_completion_requests(model, messages, tools = None, tool_choice = None):
             try:
                 response = st.session_state.openai_client.chat.completions.create(
                     model = model,
@@ -116,16 +106,19 @@ elif city and state:
                     tools = tools,
                     tool_choice = tool_choice
                 )
-                return response
             except Exception as e:
-                print("Unable to generate chat completion")
-                print(f"Execution: {e}")
-                return e
+                print()
+                response = f"Unable to generate chat completion. \n Execution: {e}"
+            return response 
+
+    if location:
+        #tools = []
+        #def add_to_tools(function_definition):
+            #tools.append(function_definition)# Building a function to create a response for the model to choose the tool. 
 
         # Adding weather function to the tools list    
-        add_to_tools(weather_function_definition)
+        # add_to_tools(weather_function_definition)
         # st.write(tools)
-
         # Using the function from the tools list
         messages = []
         messages.append({"role" : "system", "content" : "Don't make assumptions about what values to plug into functions. Ask for clarification if user request is ambiguous."})
@@ -133,7 +126,12 @@ elif city and state:
 
         if language_model == "OpenAI" and not adv_model:
             # Accessing the fucntion request:
-            response = chat_completion_requests("gpt-4o-mini", messages, tools = tools, tool_choice="auto")
+            response = st.session_state.openai_client.chat.completions.create(
+                    model = "gpt-4o-mini",
+                    messages = messages,
+                    tools = tools,
+                    tool_choice = "auto"
+                )
         else:
             # Accessing the fucntion request:
             response = st.session_state.openai_client.chat.completions.create(
@@ -142,37 +140,32 @@ elif city and state:
                     tools = tools,
                     tool_choice = "auto"
                 )
-        st.write(response)
         response_message = response.choices[0].message
-        #messages.append({"role" : "function", "content" : response_message.tool_calls[0]})
-        st.write(response_message)
-
+        messages.append(response_message) 
+        print(response_message)       
         tool_calls = response_message.tool_calls
         if tool_calls:
             tool_call_id = tool_calls[0].id
             tool_function_name = tool_calls[0].function.name
-            tool_query_string = eval(tool_calls[0].function.arguments)
-            # st.write(tool_query_string)
-        else:
-            print(response_message)
+            tool_query_string = eval(tool_calls[0].function.arguments)['location']
 
-        if tool_function_name:
-            results = get_current_weather(location, st.secrets['OPENWEATHER_KEY'])
-            
-            messages.append({
-                "role" : "tool", 
-                "tool_call_id" : tool_call_id,
-                "name" : tool_function_name, 
-                "content" : json.dumps(vars(results))})
+            if tool_function_name == 'get_current_weather':
+                results = get_current_weather(location, st.secrets['OPENWEATHER_KEY'])
+                messages.append({
+                    "role" : "tool", 
+                    "tool_call_id" : tool_call_id,
+                    "name" : tool_function_name, 
+                    "content" : f" The temp in {results['location']} is {results['temperature']}"})
 
-            st.write(messages)
-            model_response_with_function_call = st.session_state.openai_client.chat.completions.create(
-                model = "gpt-4o",
-                messages = messages
-            )
-            print(model_response_with_function_call.choices[0].message.content)
+                model_response_with_function_call = st.session_state.openai_client.chat.completions.create(
+                    model = "gpt-4o",
+                    messages = messages
+                )
+                st.write(model_response_with_function_call.choices[0].message.content)
+            else:
+                st.write(f"Error: {tool_function_name} does not exist")
         else:
-            print(f"Error: {tool_function_name} does not exist")
+            st.write(f"Error: tool does not exist")
 
 
 
