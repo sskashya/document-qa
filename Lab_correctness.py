@@ -65,7 +65,6 @@ if uploaded_file and question:
     #stream=False,
     )
     
-    st.write(stream)
     response = stream.choices[0].message.content
 
     factcheck_create_response = st.session_state.bespoke_client.minicheck.factcheck.create(
@@ -75,8 +74,6 @@ if uploaded_file and question:
     st.write(factcheck_create_response.support_prob)
 
     if factcheck_create_response.support_prob > 0.8:
-    # Stream the response to the app using `st.write_stream`.
-        #for word in response.split()
         st.write(response)
     else:
         st.write("GPT 4o is not confident it can answer this question without any doubt")
