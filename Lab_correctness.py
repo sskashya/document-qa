@@ -30,17 +30,20 @@ if 'bespoke_client' not in st.session_state:
 if 'openai_client' not in st.session_state:
     st.session_state.openai_client = OpenAI(api_key=openai_api_key)
 
-uploaded_file = st.file_uploader(
-            "Upload a document (.pdf)", type=("pdf")
-    )
+uploaded_files = os.listdir("datafiles/")
+
 question = st.text_area(
 "Now ask a question about the document!",
 placeholder="Can you give me a short summary?",
-disabled=not uploaded_file,
+disabled=not uploaded_files,
 )
 
-if uploaded_file and question:
-    document = extract_text_from_pdf(uploaded_file)
+if uploaded_files and question:
+    document = ""
+    for file in uploaded_files:
+        file_path = os.path.join("datafiles", file)
+        text = extract_text_from_pdf(file_path)
+        document += text 
     st.session_state.messages = [
     {
         "role": "system",
@@ -66,7 +69,7 @@ if uploaded_file and question:
     )
     st.write(factcheck_create_response.support_prob)
 
-    if factcheck_create_response.support_prob > 0.8:
+    if factcheck_create_response.support_prob > 0.75:
         st.write(response)
     else:
         st.write("GPT 4o is not confident it can answer this question without any doubt")
