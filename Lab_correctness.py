@@ -5,9 +5,9 @@ from openai import OpenAI
 import openai
 from PyPDF2 import PdfReader
 
-st.title("MY Document question answering")
+st.title("MY Document question answering bot")
 st.write(
-    "Upload a document below and ask a question about it – GPT will answer! "
+    "Ask a question to learn about Bespoke Minichecl"
 )
 
 openai_api_key = st.secrets["OPENAI_API_KEY"]
