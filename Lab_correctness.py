@@ -4,7 +4,6 @@ import streamlit as st
 from openai import OpenAI
 import openai
 from PyPDF2 import PdfReader
-import json
 
 st.title("MY Document question answering")
 st.write(
